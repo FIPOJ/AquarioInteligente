@@ -1,0 +1,101 @@
+#include <stdio.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "driver/gpio.h"
+
+// Define os pinos dos dispositivos principais
+#define AQUECEDOR_PIN GPIO_NUM_26
+#define BOLHAS_PIN GPIO_NUM_27
+#define VENTILADOR_PIN GPIO_NUM_25
+
+// Define os pinos dos LEDs
+#define AZUL_PIN GPIO_NUM_33
+#define VERDE_PIN GPIO_NUM_32
+#define VERMELHO_PIN GPIO_NUM_22 // Substituí GPIO35 por GPIO22 (restrição de saída)
+#define AMARELO_PIN GPIO_NUM_23 // Substituí GPIO34 por GPIO23 (restrição de saída)
+
+// Função para inicializar os pinos
+void inicializa_pinos() {
+    gpio_config_t io_conf;
+    io_conf.intr_type = GPIO_INTR_DISABLE;       // Desativa interrupções
+    io_conf.mode = GPIO_MODE_OUTPUT;             // Configura como saída
+    io_conf.pin_bit_mask = (1ULL << AQUECEDOR_PIN) | 
+                           (1ULL << BOLHAS_PIN) | 
+                           (1ULL << VENTILADOR_PIN) |
+                           (1ULL << AZUL_PIN) |
+                           (1ULL << VERDE_PIN) |
+                           (1ULL << VERMELHO_PIN) |
+                           (1ULL << AMARELO_PIN); // Seleciona os pinos
+    io_conf.pull_down_en = GPIO_PULLDOWN_DISABLE; // Desativa pull-down
+    io_conf.pull_up_en = GPIO_PULLUP_DISABLE;     // Desativa pull-up
+    gpio_config(&io_conf);
+
+    // Inicializa todos os pinos desligados
+    gpio_set_level(AQUECEDOR_PIN, 0);
+    gpio_set_level(BOLHAS_PIN, 0);
+    gpio_set_level(VENTILADOR_PIN, 0);
+    gpio_set_level(AZUL_PIN, 0);
+    gpio_set_level(VERDE_PIN, 0);
+    gpio_set_level(VERMELHO_PIN, 0);
+    gpio_set_level(AMARELO_PIN, 0);
+}
+
+// Funções para os dispositivos principais (aquecedor, bolhas e ventilador)
+void ativar_aquecedor() { gpio_set_level(AQUECEDOR_PIN, 1); }
+void desativar_aquecedor() { gpio_set_level(AQUECEDOR_PIN, 0); }
+
+void ativar_bolhas() { gpio_set_level(BOLHAS_PIN, 1); }
+void desativar_bolhas() { gpio_set_level(BOLHAS_PIN, 0); }
+
+void ativar_ventilador() { gpio_set_level(VENTILADOR_PIN, 1); }
+void desativar_ventilador() { gpio_set_level(VENTILADOR_PIN, 0); }
+
+// Função para alternar os LEDs sequencialmente
+void alternar_leds() {
+    // Lista de LEDs e suas cores
+    gpio_num_t leds[] = {AZUL_PIN, VERDE_PIN, VERMELHO_PIN, AMARELO_PIN};
+    const char* cores[] = {"Azul", "Verde", "Vermelho", "Amarelo"};
+    int num_leds = sizeof(leds) / sizeof(leds[0]);
+
+    while (1) {
+        for (int i = 0; i < num_leds; i++) {
+            // Liga o LED atual
+            gpio_set_level(leds[i], 1);
+            printf("LED %s ligado\n", cores[i]);
+            vTaskDelay(pdMS_TO_TICKS(2000)); // Espera 2 segundos
+
+            // Desliga o LED atual
+            gpio_set_level(leds[i], 0);
+            printf("LED %s desligado\n", cores[i]);
+        }
+    }
+}
+
+void app_main() {
+    // Inicializa os pinos
+    inicializa_pinos();
+
+    // Cria uma tarefa separada para alternar os LEDs
+    xTaskCreate(alternar_leds, "Alternar LEDs", 2048, NULL, 1, NULL);
+
+    // Loop alternado entre aquecedor, bolhas e ventilador
+    while (1) {
+        // Ativa o aquecedor e desativa os outros
+        ativar_aquecedor();
+        desativar_bolhas();
+        desativar_ventilador();
+        vTaskDelay(pdMS_TO_TICKS(300000)); // Espera 5 minutos
+
+        // Ativa as bolhas e desativa os outros
+        desativar_aquecedor();
+        ativar_bolhas();
+        desativar_ventilador();
+        vTaskDelay(pdMS_TO_TICKS(300000)); // Espera 5 minutos
+
+        // Ativa o ventilador e desativa os outros
+        desativar_aquecedor();
+        desativar_bolhas();
+        ativar_ventilador();
+        vTaskDelay(pdMS_TO_TICKS(300000)); // Espera 5 minutos
+    }
+}

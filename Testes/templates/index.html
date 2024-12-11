@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle de LEDs</title>
+    <script>
+        function enviarMensagem() {
+            const mensagem = document.getElementById('mensagem').value;
+            fetch('/enviar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'mensagem=' + encodeURIComponent(mensagem)
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert(data.status);
+                document.getElementById('mensagem').value = '';
+            });
+        }
+
+        function atualizarMensagemRecebida() {
+            fetch('/')
+            .then(response => response.text())
+            .then(data => {
+                document.getElementById('mensagem_recebida').innerHTML = data;
+            });
+        }
+
+        setInterval(atualizarMensagemRecebida, 1000);  // Atualiza a cada segundo
+    </script>
+</head>
+<body>
+    <h1>Controle de LEDs</h1>
+    <div id="mensagem_recebida">Nenhuma mensagem recebida.</div>
+    <h2>Enviar Comando</h2>
+    <input type="text" id="mensagem" placeholder="Digite o comando">
+    <button onclick="enviarMensagem()">Enviar</button>
+</body>
+</html>
